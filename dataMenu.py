@@ -2740,6 +2740,7 @@ def DataAnalysis(self):
                 self.dataParams.append(data_int)
         popup_main.destroy()
         DataAnalysis(self)
+
     def Append_all_data(*a):
         [popup, label] = popupmsg("...", False)
         for activeImage in range(len(self.FileDictionary)):

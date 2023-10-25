@@ -170,8 +170,6 @@ class ImageAnalysis:
         fileMenu.add_command(label="Unmix Channels",
                              command=lambda:[iMO.UnmixChannels(self)])
         fileMenu.add_separator()
-        fileMenu.add_command(label="Add Channel Setup",
-                             command=self.to_be_implemented)
         fileMenu.add_command(label="Reset Image", command=lambda:[fMO.ResetCurrent(self)])
         fileMenu.add_command(label="Remove Image", command=lambda:[fMO.RemoveCurrent(self)])
         fileMenu.add_command(label="Reset All", command=lambda:[fMO.Reset(self)])
@@ -320,159 +318,14 @@ class ImageAnalysis:
                     "white": [1, 1, 1]}
         self.all_lookup_markers = {
                 0: ["C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8", "C9",
-                    "C10"],
-                1: ["DAPI", "CD8", "VISTA", "CD138", "CD11b",
-                    "background", "garbage"],
-                2: ["CD3", "CD20", "CD8", "CK", "DAPI", "CD56", "CD68",
-                    "background", "garbage"],
-                3: ["DAPI", "CD8", "CD20", "CD3", "CD68", "CD56", "CK",
-                    "background", "garbage"],
-                4: ["DAPI", "CK", "CD8", "CD3", "FOXP3", "CD45RO", "GZMB",
-                    "background", "garbage"],
-                5: ["DAPI", "PD-L1", "CD11C", "HLA-DR", "CD163", "CK", "CD68",
-                    "background", "garbage"],
-                6: ["CK", "Ki67", "APOBEC", "DAPI", "background"],
-                7: ["PD-1", "Gal-9", "TIM-3", "CD-8", "Ki-67", "PD-L1", "CK",
-                    "DAPI", "background"],
-                8: ["DAPI", "CD8", "Coumarin", "S100A7", "Col10", "CD11b",
-                    "Clec9A", "CD163", "background"],
-                9: ["CD4", "CD8", "CD11b", "CXCR3", "T-bet", "PD1", "DAPI",
-                    "CK", "background"],
-                10: ["FOXP3", "CD20", "BCL6", "T-bet", "CD21", "CD4", "DAPI",
-                     "CK", "background"],
-                11: ["DAPI", "GR1", "F4/80", "CD8", "background"],
-                12: ["CD8", "IDH", "DAPI", "CD56", "CD3", "CD68", "CD20",
-                     "background"],
-                13: ["CD56", "CD20", "CD8", "CK", "DAPI", "CD68", "CD3",
-                     "background", "garbage"],
-                14: ["PD-L1", "CD57", "CK", "CD4", "DAPI", "CD8", "CD68",
-                     "background", "garbage"],
-                15: ["CD4", "CD20", "CD21", "CK", "DAPI", "FoxP3", "T-bet",
-                     "GZM-B", "background"],
-                16: ["DAPI", "TDO2", "SMA", "CD8", "CD11b", "ERG",
-                     "CK-B", "background"],
-                17: ["Cycline B", "APOBEC3B", "Cycline E", "DAPI", "Ki67",
-                     "p-CK", "background"],
-                18: ['CD4', 'CD8', 'CD20', 'CK', 'DAPI', 'background'],
-                19: ['DAPI','CD3', 'CD68', 'CD8', 'CD56', 'CD20', 'CK', 'background'],
-                20: ['CK', 'A3B', 'Ki67', 'CyclinB', 'CyclinE', 'DAPI', 'CD8', 'background'],
-                21: ['CD8', 'DAPI', 'CD4', 'CD66b', 'CK', 'background'],
-                22: ['CD8', 'CD20', 'CD66b', 'CD68', 'CK', 'DAPI', 'CD3', 'CD56', 'background'],
-                23: ['DAPI', 'FAP', 'D2-40(podoplanin)'],
-                24: ['CD8','CD3','CD20','CD68','CD138','DAPI','MelanA','background'],
-                25: ['CD3','CD8','CD68','TMEM119','CD163','DAPI','CD20','CD31','background']}
+                    "C10"]}
 
         self.all_lookup_colors = {
                 0: ["red", "green", "blue", "cyan", "magenta", "yellow",
-                    "orange", "pink", "white", "black"],
-                1: ["blue", "green", "red", "cyan", "yellow", "black",
-                    "magenta", "orange", "pink", "white"],
-                2: ["green", "yellow", "red", "cyan", "blue", "magenta",
-                    "orange", "black", "pink", "white"],
-                3: ["blue", "red", "yellow", "green", "orange", "magenta",
-                    "cyan", "black", "pink", "white"],
-                4: ["blue", "cyan", "red", "green", "magenta", "orange",
-                    "yellow", "black", "pink", "white"],
-                5: ["blue", "green", "yellow", "red", "magenta", "cyan",
-                    "orange", "black", "pink", "white"],
-                6: ["cyan", "red", "yellow", "blue", "black", "magenta",
-                    "green", "orange", "pink", "white"],
-                7: ["green", "pink", "yellow", "magenta", "white", "red",
-                    "cyan", "blue", "black", "orange"],
-                8: ["blue", "red", "cyan", "magenta", "pink", "orange",
-                    "yellow", "green", "black", "white"],
-                9: ["green", "red", "magenta", "yellow", "white", "pink",
-                    "blue", "cyan", "black", "orange"],
-                10: ["red", "yellow", "orange", "cyan", "magenta", "green",
-                     "blue", "pink", "black", "white"],
-                11: ["blue", "green", "red", "yellow", "black", "magenta",
-                     "cyan", "orange", "pink", "white"],
-                12: ["red", "white", "blue", "magenta", "green", "orange",
-                     "yellow", "black", "pink", "cyan"],
-                13: ["magenta", "yellow", "red", "cyan", "blue", "orange",
-                     "green", "black", "pink", "white"],
-                14: ["magenta", "yellow", "cyan", "green", "blue", "red",
-                     "orange", "black", "pink", "white"],
-                15: ["green", "red", "magenta", "white", "blue", "yellow",
-                     "cyan", "orange", "black", "pink"],
-                16: ["blue", "green", "pink", "red", "yellow", "magenta",
-                     "cyan", "black", "white", "orange"],
-                17: ["cyan", "yellow", "orange", "blue", "magenta",
-                     "green", "black", "red", "pink", "white"],
-                18: ["green", "red", "yellow", "cyan", "blue", "black",
-                     "orange", "magenta", "pink", "white"],
-                19: ["blue", "green", "orange", "red",
-                 "magenta", "yellow", "cyan", "black", "pink", "white"],
-                20: ["cyan", "yellow", "red", "orange", "magenta",
-                     "blue", "green", "black", "pink", "white"],
-                21: ["red", "blue", "green", "yellow", "cyan", "black",
-                     "orange", "magenta", "pink", "white"],
-                22: ["red", "yellow", "white", "orange", "cyan", "blue",
-                     "green", "magenta", "black", "pink"],
-                23: ["blue", "red", "green", "black",
-                     "yellow", "white", "orange", "cyan", "magenta", "pink"],
-                24: ["red", "green", "yellow", "orange",
-                     "magenta", "blue", "cyan", "black",
-                     "white", "pink"],
-                25: ["green", "red", "orange", "white", "cyan",
-                     "blue", "yellow", "magenta", "black",
-                     "pink"]}
+                    "orange", "pink", "white", "black"]}
+        
         self.all_marker_dropdown = [
-                "Default",
-                "Myeloma: DAPI:blue, CD8:green, VISTA:red, CD138:cyan," +
-                " CD11b:yellow",
-                "Bladder Cancer: CD3:green, CD20:yellow, CD8:red, CK:cyan," +
-                " DAPI:blue, CD56:magenta, CD68:orange",
-                "TNBC: DAPI:blue, CD8:red, CD20:yellow, CD3:green," +
-                " CD68:orange, CD56:magenta, CK:cyan",
-                "LUMC-T-cell: DAPI:blue, CK:cyan, CD8:red, CD3:green," +
-                " FOXP3:magenta, CD45RO:orange, GZMB:yellow",
-                "LUMC-myeloid: DAPI:blue, PD-L1:green, CD11C:yellow," +
-                " HLA-DR:red,  CD163:magenta, CK:cyan, CD68:orange",
-                "APOBEC-ISH: CK:cyan, Ki67:red, APOBEC:yellow, DAPI:blue",
-                "Checkpoint: PD-1:green, Gal-9:pink, TIM-3:yellow," +
-                " CD-8:magenta, Ki-67:white, PD-L1: red, CK:cyan, DAPI:blue",
-                "Exclusion: DAPI:blue, Opal540:red, Coumarin:cyan," +
-                " Opal650:magenta, Opal620:pink, Opan690:orange," +
-                " Opal570:yellow, Opal520:green, background:black",
-                "Bladder-specific: CD4:green, CD8:red, CD11b:magenta," +
-                " CXCR3:yellow, T-bet:white, PD1:pink, DAPI:blue," +
-                " CK:cyan, background:black",
-                "Oral-specific: FOXP3:red, CD20:yellow, BCL6:orange," +
-                " T-bet:cyan, CD21:magenta, CD4:green, DAPI:blue, CK:pink," +
-                " background:black",
-                "FM1: DAPI:blue, GR1:green, F4/80:red, CD8:yellow," +
-                " background:black",
-                "Low-Grade Glioma: CD8:red, IDH: white, DAPI:blue," +
-                " CD56:magenta, CD3:green, CD68:orange, CD20:yellow," +
-                " background:black",
-                "Bladder Cancer2: CD56:magenta, CD20:yellow, CD8:red," +
-                " CK:cyan, DAPI:blue, CD68:orange, CD3:green",
-                "Hong Kong NPC: PD-L1:magenta, CD57:yellow, CK:cyan, CD4:" +
-                "green, DAPI:blue, CD8:red, CD68:orange, background:black",
-                "Bladder CD4 subsets: CD4:green, CD20:yellow, CD21:magenta," +
-                "CK:white, DAPI:blue, FoxP3:yellow, T-bet:cyan, " +
-                "GZM-B:oragne, background:black",
-                "ERG immune profiling in PRCA: DAPI: blue, TDO2:green, " +
-                "SMA:pink, CD8:red, CD11b:yellow, ERG:magenta, CK:cyan, " +
-                "background:black",
-                "APOBEC panel: Cycline B: cyan, APOBEC3B: yellow, Cycline E:"+
-                " orange, DAPI: blue, Ki67: magenta, CK: green",
-                "Oral-Lymphocyte: CD4: green, CD8: red, CD20: yellow, CK:"+
-                " cyan, DAPI: blue",
-                "Ovarian: DAPI:blue, CD3:green, CD68:orange, CD8:red," +
-                " CD56:magenta, CD20:yellow, CK:cyan",
-                "APOBEC-Cycline: CK:cyan, A3B:yellow, Ki67:red, CyclinB:orange," +
-                " CyclinE:magenta, DAPI:blue, CD8:green",
-                "Neutrophil-Tcell panel: CD8:red, DAPI:blue, CD4:green, "+
-                "CD66b:yellow, CK:cyan",
-                "NPC-effector: CD8:red, CD20:yellow, CD66b:white, CD68:orange, "+
-                "CK:cyan, DAPI:blue, CD3:green, CD56:magenta",
-                "mUC TSE score: DAPI:blue, FAP:red, S2-40(podoplanin):green",
-                "THREAT: CD8: red, CD3: green, CD20: yellow, CD68: orange, "+
-                "CD138: magenta, DAPI: blue, MelanA: cyan",
-                "HGG-myeloid: CD3: green, CD8: red, CD68: orange, TMEM119: "+
-                "white, CD163: cyan, DAPI: blue, CD20: yellow, CD31: magenta"]
+                "Default"]
 
 
         self.im_raw = []
@@ -508,6 +361,7 @@ class ImageAnalysis:
         self.small_images = []
         self.Markers = self.all_lookup_markers[default_setup]
         self.Color_info = self.all_lookup_colors[default_setup]
+        self.newChSetup = []
         self.default_analysis_params = {"Foreground": {},
                                         "Segments": {},
                                         "Phenotypes": {}}

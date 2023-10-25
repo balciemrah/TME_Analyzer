@@ -28,44 +28,6 @@ import skimage.measure
 from math import log
 import pickle
 from imageMenu import DestroyTK, popupmsg
-# os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
-
-
-# def DestroyTK(tk_param):
-#     try:
-#         tk_param.destroy()
-#     except tkinter.TclError:
-#         pass
-#     except ttkinter.TclError:
-#         pass
-
-# def popupmsg(msg, self_control=True):
-#     def Quit(*a):
-#         popupnew2 = tkinter.Tk()
-#         popupnew2.wm_title("!")
-#         label2 = tkinter.Label(popupnew2, text="This will stop the current" +
-#                                " operation following this iteration!\n" +
-#                                "Are you sure?")
-#         label2.pack(side="top", fill="x", pady=10)
-#         B1 = tkinter.Button(popupnew2, text="Go Ahead",
-#                             command=lambda: [DestroyTK(popupnew2),
-#                                              DestroyTK(popupnew)])
-#         B1.pack()
-#         B2 = tkinter.Button(popupnew2, text="Go Back",
-#                             command=lambda:[DestroyTK(popupnew2)])
-#         B2.pack()
-#         popupnew2.mainloop()
-#     popupnew = tkinter.Tk()
-#     popupnew.wm_title("!")
-#     label = tkinter.Label(popupnew, text=msg)
-#     label.pack(side="top", fill="x", pady=10)
-#     if self_control:
-#         B1 = tkinter.Button(popupnew, text="Okay", command=lambda:[DestroyTK(popupnew)])
-#         B1.pack()
-#     else:
-#         popupnew.protocol("WM_DELETE_WINDOW", Quit)
-#     popupnew.update()
-#     return popupnew, label
 
 def openFile(self):
     ftypes = [('Tiff images', '.tif .tiff')]
@@ -893,7 +855,384 @@ def LoadWorkspaceFolder(self):
     DestroyTK(popup_int)
     self.remake_side_window()
 
-def ChangeChannelSetup(self):
+def ChangeChannelSetup(self, n_Ch=0):
+    def LoadDefaultChannels(*args):
+        self.all_lookup_markers = {
+                0: ["C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8", "C9",
+                    "C10"],
+                1: ["DAPI", "CD8", "VISTA", "CD138", "CD11b",
+                    "background", "garbage"],
+                2: ["CD3", "CD20", "CD8", "CK", "DAPI", "CD56", "CD68",
+                    "background", "garbage"],
+                3: ["DAPI", "CD8", "CD20", "CD3", "CD68", "CD56", "CK",
+                    "background", "garbage"],
+                4: ["DAPI", "CK", "CD8", "CD3", "FOXP3", "CD45RO", "GZMB",
+                    "background", "garbage"],
+                5: ["DAPI", "PD-L1", "CD11C", "HLA-DR", "CD163", "CK", "CD68",
+                    "background", "garbage"],
+                6: ["CK", "Ki67", "APOBEC", "DAPI", "background"],
+                7: ["PD-1", "Gal-9", "TIM-3", "CD-8", "Ki-67", "PD-L1", "CK",
+                    "DAPI", "background"],
+                8: ["DAPI", "CD8", "Coumarin", "S100A7", "Col10", "CD11b",
+                    "Clec9A", "CD163", "background"],
+                9: ["CD4", "CD8", "CD11b", "CXCR3", "T-bet", "PD1", "DAPI",
+                    "CK", "background"],
+                10: ["FOXP3", "CD20", "BCL6", "T-bet", "CD21", "CD4", "DAPI",
+                    "CK", "background"],
+                11: ["DAPI", "GR1", "F4/80", "CD8", "background"],
+                12: ["CD8", "IDH", "DAPI", "CD56", "CD3", "CD68", "CD20",
+                    "background"],
+                13: ["CD56", "CD20", "CD8", "CK", "DAPI", "CD68", "CD3",
+                    "background", "garbage"],
+                14: ["PD-L1", "CD57", "CK", "CD4", "DAPI", "CD8", "CD68",
+                    "background", "garbage"],
+                15: ["CD4", "CD20", "CD21", "CK", "DAPI", "FoxP3", "T-bet",
+                    "GZM-B", "background"],
+                16: ["DAPI", "TDO2", "SMA", "CD8", "CD11b", "ERG",
+                    "CK-B", "background"],
+                17: ["Cycline B", "APOBEC3B", "Cycline E", "DAPI", "Ki67",
+                    "p-CK", "background"],
+                18: ['CD4', 'CD8', 'CD20', 'CK', 'DAPI', 'background'],
+                19: ['DAPI','CD3', 'CD68', 'CD8', 'CD56', 'CD20', 'CK', 'background'],
+                20: ['CK', 'A3B', 'Ki67', 'CyclinB', 'CyclinE', 'DAPI', 'CD8', 'background'],
+                21: ['CD8', 'DAPI', 'CD4', 'CD66b', 'CK', 'background'],
+                22: ['CD8', 'CD20', 'CD66b', 'CD68', 'CK', 'DAPI', 'CD3', 'CD56', 'background'],
+                23: ['DAPI', 'FAP', 'D2-40(podoplanin)'],
+                24: ['CD8','CD3','CD20','CD68','CD138','DAPI','MelanA','background'],
+                25: ['CD3','CD8','CD68','TMEM119','CD163','DAPI','CD20','CD31','background']}
+
+        self.all_lookup_colors = {
+                0: ["red", "green", "blue", "cyan", "magenta", "yellow",
+                    "orange", "pink", "white", "black"],
+                1: ["blue", "green", "red", "cyan", "yellow", "black",
+                    "magenta", "orange", "pink", "white"],
+                2: ["green", "yellow", "red", "cyan", "blue", "magenta",
+                    "orange", "black", "pink", "white"],
+                3: ["blue", "red", "yellow", "green", "orange", "magenta",
+                    "cyan", "black", "pink", "white"],
+                4: ["blue", "cyan", "red", "green", "magenta", "orange",
+                    "yellow", "black", "pink", "white"],
+                5: ["blue", "green", "yellow", "red", "magenta", "cyan",
+                    "orange", "black", "pink", "white"],
+                6: ["cyan", "red", "yellow", "blue", "black", "magenta",
+                    "green", "orange", "pink", "white"],
+                7: ["green", "pink", "yellow", "magenta", "white", "red",
+                    "cyan", "blue", "black", "orange"],
+                8: ["blue", "red", "cyan", "magenta", "pink", "orange",
+                    "yellow", "green", "black", "white"],
+                9: ["green", "red", "magenta", "yellow", "white", "pink",
+                    "blue", "cyan", "black", "orange"],
+                10: ["red", "yellow", "orange", "cyan", "magenta", "green",
+                    "blue", "pink", "black", "white"],
+                11: ["blue", "green", "red", "yellow", "black", "magenta",
+                    "cyan", "orange", "pink", "white"],
+                12: ["red", "white", "blue", "magenta", "green", "orange",
+                    "yellow", "black", "pink", "cyan"],
+                13: ["magenta", "yellow", "red", "cyan", "blue", "orange",
+                    "green", "black", "pink", "white"],
+                14: ["magenta", "yellow", "cyan", "green", "blue", "red",
+                    "orange", "black", "pink", "white"],
+                15: ["green", "red", "magenta", "white", "blue", "yellow",
+                    "cyan", "orange", "black", "pink"],
+                16: ["blue", "green", "pink", "red", "yellow", "magenta",
+                    "cyan", "black", "white", "orange"],
+                17: ["cyan", "yellow", "orange", "blue", "magenta",
+                    "green", "black", "red", "pink", "white"],
+                18: ["green", "red", "yellow", "cyan", "blue", "black",
+                    "orange", "magenta", "pink", "white"],
+                19: ["blue", "green", "orange", "red",
+                "magenta", "yellow", "cyan", "black", "pink", "white"],
+                20: ["cyan", "yellow", "red", "orange", "magenta",
+                    "blue", "green", "black", "pink", "white"],
+                21: ["red", "blue", "green", "yellow", "cyan", "black",
+                    "orange", "magenta", "pink", "white"],
+                22: ["red", "yellow", "white", "orange", "cyan", "blue",
+                    "green", "magenta", "black", "pink"],
+                23: ["blue", "red", "green", "black",
+                    "yellow", "white", "orange", "cyan", "magenta", "pink"],
+                24: ["red", "green", "yellow", "orange",
+                    "magenta", "blue", "cyan", "black",
+                    "white", "pink"],
+                25: ["green", "red", "orange", "white", "cyan",
+                    "blue", "yellow", "magenta", "black",
+                    "pink"]}
+        self.all_marker_dropdown = [
+                "Default",
+                "Myeloma: DAPI:blue, CD8:green, VISTA:red, CD138:cyan," +
+                " CD11b:yellow",
+                "Bladder Cancer: CD3:green, CD20:yellow, CD8:red, CK:cyan," +
+                " DAPI:blue, CD56:magenta, CD68:orange",
+                "TNBC: DAPI:blue, CD8:red, CD20:yellow, CD3:green," +
+                " CD68:orange, CD56:magenta, CK:cyan",
+                "LUMC-T-cell: DAPI:blue, CK:cyan, CD8:red, CD3:green," +
+                " FOXP3:magenta, CD45RO:orange, GZMB:yellow",
+                "LUMC-myeloid: DAPI:blue, PD-L1:green, CD11C:yellow," +
+                " HLA-DR:red,  CD163:magenta, CK:cyan, CD68:orange",
+                "APOBEC-ISH: CK:cyan, Ki67:red, APOBEC:yellow, DAPI:blue",
+                "Checkpoint: PD-1:green, Gal-9:pink, TIM-3:yellow," +
+                " CD-8:magenta, Ki-67:white, PD-L1: red, CK:cyan, DAPI:blue",
+                "Exclusion: DAPI:blue, Opal540:red, Coumarin:cyan," +
+                " Opal650:magenta, Opal620:pink, Opan690:orange," +
+                " Opal570:yellow, Opal520:green, background:black",
+                "Bladder-specific: CD4:green, CD8:red, CD11b:magenta," +
+                " CXCR3:yellow, T-bet:white, PD1:pink, DAPI:blue," +
+                " CK:cyan, background:black",
+                "Oral-specific: FOXP3:red, CD20:yellow, BCL6:orange," +
+                " T-bet:cyan, CD21:magenta, CD4:green, DAPI:blue, CK:pink," +
+                " background:black",
+                "FM1: DAPI:blue, GR1:green, F4/80:red, CD8:yellow," +
+                " background:black",
+                "Low-Grade Glioma: CD8:red, IDH: white, DAPI:blue," +
+                " CD56:magenta, CD3:green, CD68:orange, CD20:yellow," +
+                " background:black",
+                "Bladder Cancer2: CD56:magenta, CD20:yellow, CD8:red," +
+                " CK:cyan, DAPI:blue, CD68:orange, CD3:green",
+                "Hong Kong NPC: PD-L1:magenta, CD57:yellow, CK:cyan, CD4:" +
+                "green, DAPI:blue, CD8:red, CD68:orange, background:black",
+                "Bladder CD4 subsets: CD4:green, CD20:yellow, CD21:magenta," +
+                "CK:white, DAPI:blue, FoxP3:yellow, T-bet:cyan, " +
+                "GZM-B:oragne, background:black",
+                "ERG immune profiling in PRCA: DAPI: blue, TDO2:green, " +
+                "SMA:pink, CD8:red, CD11b:yellow, ERG:magenta, CK:cyan, " +
+                "background:black",
+                "APOBEC panel: Cycline B: cyan, APOBEC3B: yellow, Cycline E:"+
+                " orange, DAPI: blue, Ki67: magenta, CK: green",
+                "Oral-Lymphocyte: CD4: green, CD8: red, CD20: yellow, CK:"+
+                " cyan, DAPI: blue",
+                "Ovarian: DAPI:blue, CD3:green, CD68:orange, CD8:red," +
+                " CD56:magenta, CD20:yellow, CK:cyan",
+                "APOBEC-Cycline: CK:cyan, A3B:yellow, Ki67:red, CyclinB:orange," +
+                " CyclinE:magenta, DAPI:blue, CD8:green",
+                "Neutrophil-Tcell panel: CD8:red, DAPI:blue, CD4:green, "+
+                "CD66b:yellow, CK:cyan",
+                "NPC-effector: CD8:red, CD20:yellow, CD66b:white, CD68:orange, "+
+                "CK:cyan, DAPI:blue, CD3:green, CD56:magenta",
+                "mUC TSE score: DAPI:blue, FAP:red, S2-40(podoplanin):green",
+                "THREAT: CD8: red, CD3: green, CD20: yellow, CD68: orange, "+
+                "CD138: magenta, DAPI: blue, MelanA: cyan",
+                "HGG-myeloid: CD3: green, CD8: red, CD68: orange, TMEM119: "+
+                "white, CD163: cyan, DAPI: blue, CD20: yellow, CD31: magenta"]
+
+    def define_new_channel(*args):
+        def addCh(*a):
+            internal_windows = tkinter.Frame(popup_int, width=100, height=10)
+            internal_windows.pack(side=tkinter.TOP)
+            data_int = []
+            data_int.append(internal_windows)
+            internal_windows1 = tkinter.Frame(internal_windows)
+            internal_windows1.pack(side=tkinter.LEFT)
+            data_int.append(internal_windows1)
+            marker_name1 = tkinter.StringVar(internal_windows1)
+            marker_name1.set("DAPI")
+            data_int.append(marker_name1)
+            data_int.append(marker_name1.get())
+            marker_1 = tkinter.Entry(internal_windows1,
+                                        textvariable=marker_name1)
+            marker_1.config(width=10)
+            marker_1.pack(side=tkinter.LEFT)
+            ch_name1 = tkinter.StringVar(internal_windows1)
+            ch_name1.set("blue")
+            data_int.append(ch_name1)
+            data_int.append(ch_name1.get())
+            ch_var_pointer1 = tkinter.OptionMenu(internal_windows1,
+                                                    ch_name1,
+                                                    *self.LUT.keys())
+            ch_var_pointer1.config(width=10)
+            ch_var_pointer1.pack(side=tkinter.LEFT)
+            n = len(self.newChSetup)
+            data_int.append(n)
+            self.newChSetup.append(data_int)
+
+        def rmvCh(*a):
+            DOI = np.int32(ChlabelButton.get())
+            if (DOI <= len(self.newChSetup)) & (DOI > 0):
+                DestroyTK(self.newChSetup[DOI-1][0])
+                self.newChSetup.pop(DOI-1)
+            for i in range(0, len(self.newChSetup)):
+                self.newChSetup[i][6] = i
+
+        def save_channel(*a):
+            if len(self.newChSetup) == 0:
+                return
+            filename_save = tkinter.filedialog.asksaveasfilename(
+                    parent=popup_main)
+            ChannelParams = [[i[2].get(),i[4].get()] for i in self.newChSetup]
+            if filename_save:
+                pickle_savename = filename_save
+                if filename_save[-7:] != '.pickle':
+                    if '.' not in filename_save[-5:]:
+                        pickle_savename += '.pickle'
+                with open(pickle_savename, 'wb') as f:
+                    pickle.dump({"Channel Params": ChannelParams}, f)
+
+        def load_channel(*a):
+            filename = tkinter.filedialog.askopenfilename(parent=popup_main)
+            pickle_data = pickle.load(open(filename, "rb"))
+            ChannelParams = pickle_data["Channel Params"]
+            if len(ChannelParams) == 0:
+                return
+            self.newChSetup = []
+            for i in range(len(ChannelParams)):
+                data_int_temp = ChannelParams[i]
+                internal_windows = tkinter.Frame(popup_int, width=100, height=10)
+                internal_windows.pack(side=tkinter.TOP)
+                data_int = []
+                data_int.append(internal_windows)
+                internal_windows1 = tkinter.Frame(internal_windows)
+                internal_windows1.pack(side=tkinter.LEFT)
+                data_int.append(internal_windows1)
+                marker_name1 = tkinter.StringVar(internal_windows1)
+                marker_name1.set(data_int_temp[0])
+                data_int.append(marker_name1)
+                data_int.append(marker_name1.get())
+                marker_1 = tkinter.Entry(internal_windows1,
+                                         textvariable=marker_name1)
+                marker_1.config(width=10)
+                marker_1.pack(side=tkinter.LEFT)
+                ch_name1 = tkinter.StringVar(internal_windows1)
+                ch_name1.set(data_int_temp[1])
+                data_int.append(ch_name1)
+                data_int.append(ch_name1.get())
+                ch_var_pointer1 = tkinter.OptionMenu(internal_windows1,
+                                                        ch_name1,
+                                                        *self.LUT.keys())
+                ch_var_pointer1.config(width=10)
+                ch_var_pointer1.pack(side=tkinter.LEFT)
+                n = len(self.newChSetup)
+                data_int.append(n)
+                self.newChSetup.append(data_int)
+            popup_main.destroy()
+            define_new_channel(self)
+        
+        def ResetSetup(*a):
+            self.newChSetup = []
+            internal_windows = tkinter.Frame(popup_int, width=100, height=10)
+            internal_windows.pack(side=tkinter.TOP)
+            data_int = []
+            data_int.append(internal_windows)
+            internal_windows1 = tkinter.Frame(internal_windows)
+            internal_windows1.pack(side=tkinter.LEFT)
+            data_int.append(internal_windows1)
+            marker_name1 = tkinter.StringVar(internal_windows1)
+            marker_name1.set("DAPI")
+            data_int.append(marker_name1)
+            data_int.append(marker_name1.get())
+            marker_1 = tkinter.Entry(internal_windows1,
+                                        textvariable=marker_name1)
+            marker_1.config(width=10)
+            marker_1.pack(side=tkinter.LEFT)
+            ch_name1 = tkinter.StringVar(internal_windows1)
+            ch_name1.set("blue")
+            data_int.append(ch_name1)
+            data_int.append(ch_name1.get())
+            ch_var_pointer1 = tkinter.OptionMenu(internal_windows1,
+                                                    ch_name1,
+                                                    *self.LUT.keys())
+            ch_var_pointer1.config(width=10)
+            ch_var_pointer1.pack(side=tkinter.LEFT)
+            data_int.append(0)
+            self.newChSetup.append(data_int)
+            popup_main.destroy()
+            define_new_channel(self)
+
+        def SaveandClose(*a):
+            n_Ch = len(self.all_lookup_markers)
+            self.all_lookup_markers[n_Ch] = [i[2].get() for i in self.newChSetup]
+            self.all_lookup_colors[n_Ch] = [i[4].get() for i in self.newChSetup]
+            marker_string = ''
+            for i in self.newChSetup:
+                marker_string += i[2].get() + ': ' + i[4].get() + ', '
+            self.all_marker_dropdown.append(marker_string[:-2])
+            popup_main.destroy()
+            ChangeChannelSetup(self,n_Ch)
+
+        popup_main = tkinter.Tk()
+        # popup_main.geometry("1200x800")
+        popup_main.wm_title("Add New Channel")
+        popup_int = tkinter.Frame(popup_main)#, width=400, height=1000)
+        toolbar = tkinter.Frame(popup_main)
+        addPopButton = ttkinter.Button(toolbar, text="Add Channel",
+                                        command=addCh)
+        addPopButton.pack(side=tkinter.LEFT, padx=2, pady=2)
+        rmvPopButton = ttkinter.Button(toolbar, text="Remove Channel",
+                                        command=rmvCh)
+        rmvPopButton.pack(side=tkinter.LEFT, padx=2, pady=2)
+        ChlabelButton = tkinter.Entry(toolbar)
+        ChlabelButton.pack(side=tkinter.LEFT)
+        ChlabelButton.insert(0, "1")
+
+        showDataButton = ttkinter.Button(toolbar, text="Save Setup to File",
+                                            command=save_channel)
+        showDataButton.pack(side=tkinter.LEFT, padx=2, pady=2)
+        appDataButton = ttkinter.Button(toolbar, text="Load Setup",
+                                        command=load_channel)
+        appDataButton.pack(side=tkinter.LEFT, padx=2, pady=2)
+        rmvDataButton = ttkinter.Button(toolbar, text="Reset Setup",
+                                        command=ResetSetup)
+        rmvDataButton.pack(side=tkinter.LEFT, padx=2, pady=2)
+        saveDataButton = ttkinter.Button(toolbar, text="Save and Close",
+                                            command=SaveandClose)
+        saveDataButton.pack(side=tkinter.LEFT, padx=2, pady=2)
+        toolbar.pack(side=tkinter.TOP, fill=tkinter.X)
+        popup_int.pack(side=tkinter.TOP)
+        if len(self.newChSetup) != 0:
+            # addPhenoButton = []
+            for i in range(len(self.newChSetup)):
+                data_int = self.newChSetup[i]
+                internal_windows = tkinter.Frame(popup_int, width=100,
+                                                    height=10)
+                internal_windows.pack(side=tkinter.TOP)
+                data_int[0] = internal_windows
+                internal_windows1 = tkinter.Frame(internal_windows)
+                internal_windows1.pack(side=tkinter.LEFT)
+                data_int[1] = internal_windows1
+                marker_name1 = tkinter.StringVar(internal_windows)
+                marker_name1.set(data_int[2].get())
+                data_int[2] = marker_name1
+                data_int[3] = marker_name1.get()
+                marker_1 = tkinter.Entry(internal_windows1,
+                                         textvariable=marker_name1)
+                marker_1.config(width=10)
+                marker_1.pack(side=tkinter.LEFT)
+                ch_name1 = tkinter.StringVar(internal_windows1)
+                ch_name1.set(data_int[4].get())
+                data_int[4] = ch_name1
+                data_int[5] = ch_name1.get()
+                ch_var_pointer1 = tkinter.OptionMenu(internal_windows1,
+                                                     ch_name1,
+                                                     *self.LUT.keys())
+                ch_var_pointer1.config(width=10)
+                ch_var_pointer1.pack(side=tkinter.LEFT)
+                data_int[6] = i
+                self.newChSetup[i] = data_int
+        else:
+            internal_windows = tkinter.Frame(popup_int, width=100, height=10)
+            internal_windows.pack(side=tkinter.TOP)
+            data_int = []
+            data_int.append(internal_windows)
+            internal_windows1 = tkinter.Frame(internal_windows)
+            internal_windows1.pack(side=tkinter.LEFT)
+            data_int.append(internal_windows1)
+            marker_name1 = tkinter.StringVar(internal_windows1)
+            marker_name1.set("DAPI")
+            data_int.append(marker_name1)
+            data_int.append(marker_name1.get())
+            marker_1 = tkinter.Entry(internal_windows1,
+                                        textvariable=marker_name1)
+            marker_1.config(width=10)
+            marker_1.pack(side=tkinter.LEFT)
+            ch_name1 = tkinter.StringVar(internal_windows1)
+            ch_name1.set("blue")
+            data_int.append(ch_name1)
+            data_int.append(ch_name1.get())
+            ch_var_pointer1 = tkinter.OptionMenu(internal_windows1,
+                                                    ch_name1,
+                                                    *self.LUT.keys())
+            ch_var_pointer1.config(width=10)
+            ch_var_pointer1.pack(side=tkinter.LEFT)
+            data_int.append(0)
+            self.newChSetup.append(data_int)
+
     def get_tick_values(*args):
         self.Markers = lookup_markers[dropdown_options.index(
                 combine_option.get())]
@@ -904,14 +1243,26 @@ def ChangeChannelSetup(self):
     popup = tkinter.Tk()
     dropdown_options = self.all_marker_dropdown
     combine_option = tkinter.StringVar(popup)
-    combine_option.set(dropdown_options[0])
+    combine_option.set(dropdown_options[n_Ch])
     combine_option.trace("w", get_tick_values)
     c = tkinter.OptionMenu(popup, combine_option, *dropdown_options)
     c.pack()
-    folderButton = ttkinter.Button(popup, text="Confirm",
+
+
+
+    confirmButton = ttkinter.Button(popup, text="Confirm",
                                     command=lambda: [get_tick_values(),
-                                                    DestroyTK(popup)])
-    folderButton.pack()
+                                                     DestroyTK(popup)])
+    confirmButton.pack()
+    addButton = ttkinter.Button(popup, text="Add channel setup",
+                                    command=lambda: [define_new_channel(),
+                                                     DestroyTK(popup)])
+    addButton.pack()
+    LoadDButton = ttkinter.Button(popup, text="Load default channels",
+                                    command=lambda: [LoadDefaultChannels(),
+                                                     DestroyTK(popup),
+                                                     ChangeChannelSetup(self)])
+    LoadDButton.pack()
     popup.mainloop()
 
 def cropFile(self):
