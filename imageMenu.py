@@ -116,42 +116,6 @@ class Slider(tkinter.Frame):
         else:
             self.text_mod = False
 
-# def DestroyTK(tk_param):
-#     try:
-#         tk_param.destroy()
-#     except tkinter.TclError:
-#         pass
-#     except ttkinter.TclError:
-#         pass
-
-# def popupmsg(msg, self_control=True):
-#     def Quit(*a):
-#         popupnew2 = tkinter.Tk()
-#         popupnew2.wm_title("!")
-#         label2 = tkinter.Label(popupnew2, text="This will stop the current" +
-#                                " operation following this iteration!\n" +
-#                                "Are you sure?")
-#         label2.pack(side="top", fill="x", pady=10)
-#         B1 = tkinter.Button(popupnew2, text="Go Ahead",
-#                             command=lambda: [DestroyTK(popupnew2),
-#                                              DestroyTK(popupnew)])
-#         B1.pack()
-#         B2 = tkinter.Button(popupnew2, text="Go Back",
-#                             command=lambda:[DestroyTK(popupnew2)])
-#         B2.pack()
-#         popupnew2.mainloop()
-#     popupnew = tkinter.Tk()
-#     popupnew.wm_title("!")
-#     label = tkinter.Label(popupnew, text=msg)
-#     label.pack(side="top", fill="x", pady=10)
-#     if self_control:
-#         B1 = tkinter.Button(popupnew, text="Okay", command=lambda:[DestroyTK(popupnew)])
-#         B1.pack()
-#     else:
-#         popupnew.protocol("WM_DELETE_WINDOW", Quit)
-#     popupnew.update()
-#     return popupnew, label
-
 def SelectROI(self):
     def resetROI(*a):
         popup2 = tkinter.Tk()
@@ -412,14 +376,14 @@ def UnmixChannels(self):
         inputted_params.append(True)
 
         if (inputted_params[0] == 'All') & (inputted_params[2] == 'All'):
-            self.popupmsg('Did not think any sane person ' +
-                        'would want this...\n' +
-                        'If you are reading this message, and ' +
-                        'really want this implemented\n' +
-                        'send an email to Emrah to implement this.')
+            popupmsg('Did not think any sane person ' +
+                    'would want this...\n' +
+                    'If you are reading this message, and ' +
+                    'really want this implemented\n' +
+                    'send an email to Emrah to implement this.')
         else:
             DestroyTK(self.popup)
-            [popup, label] = self.popupmsg("...", False)
+            [popup, label] = popupmsg("...", False)
             for self.activeImage in range(len(self.FileDictionary)):
                 label['text'] = ("Unmixing image " +
                                     str(self.activeImage + 1) + " of " +
@@ -606,46 +570,56 @@ def UnmixChannels(self):
                     im_1 = im_1[(im_1 == im_1)]
                     # lm = sklearn.linear_model.LinearRegression()
                     # model = lm.fit(im_2, im_1)
-                    model = linregress(im_1,im_2)
+                    X = np.c_[im_2, np.ones(im_2.shape[0])]  # add bias term
+                    beta_hat = np.linalg.lstsq(X, im_1, rcond=None)[0]
+
                     if unmix_threshold > 0:
                         # y_hat = model.predict(im_2)
                         # y_bar = np.sum(im_1)/len(im_1)
                         # ssreg = np.sum((y_hat-y_bar)**2)
                         # sstot = np.sum((im_1-y_bar)**2)
                         # r_square = ssreg/sstot
-                        r_square = model.rvalue**2
+                        y_hat = np.dot(X,beta_hat)
+                        y_bar = np.sum(im_1)/len(im_1)
+                        ssreg = np.sum((y_hat-y_bar)**2)
+                        sstot = np.sum((im_1-y_bar)**2)
+                        r_square = ssreg/sstot
                         if r_square > unmix_threshold:
                             im_raw_extracted = im_raw[:, :, [
                                     i != ch_1 for i in range(n_channels)]]
                             im_raw_extracted = im_raw_extracted.reshape(
                                     (np.int32(im_raw_extracted.size/(
                                             n_channels-1)), n_channels-1))
+                            X = np.c_[im_raw_extracted, np.ones(im_raw_extracted.shape[0])]
+                            X0 = np.c_[im_raw_extracted*0, np.ones(im_raw_extracted.shape[0])]
+                            im_raw_temp[:, :, ch_1] = im_raw[
+                                    :, :, ch_1] - np.dot(X,beta_hat).reshape(im_raw[
+                                        :, :, ch_1].shape) + np.dot(X0,beta_hat).reshape(
+                                                im_raw[:, :, ch_1].shape)
                             # im_raw_temp[:, :, ch_1] = im_raw[
                             #         :, :, ch_1] - model.predict(
                             #         im_raw_extracted).reshape(im_raw[
                             #             :, :, ch_1].shape) + model.predict(
                             #                 im_raw_extracted*0).reshape(
                             #                     im_raw[:, :, ch_1].shape)
-                            im_raw_temp[:, :, ch_1] = im_raw[
-                                    :, :, ch_1] - (model.slope*
-                                    im_raw_extracted).reshape(im_raw[
-                                        :, :, ch_1].shape)
                     else:
                         im_raw_extracted = im_raw[:, :, [
                                 i != ch_1 for i in range(n_channels)]]
                         im_raw_extracted = im_raw_extracted.reshape(
                                 (np.int32(im_raw_extracted.size/(
                                         n_channels-1)), n_channels-1))
+                        X = np.c_[im_raw_extracted, np.ones(im_raw_extracted.shape[0])]
+                        X0 = np.c_[im_raw_extracted*0, np.ones(im_raw_extracted.shape[0])]
+                        im_raw_temp[:, :, ch_1] = im_raw[
+                                :, :, ch_1] - np.dot(X,beta_hat).reshape(im_raw[
+                                    :, :, ch_1].shape) + np.dot(X0,beta_hat).reshape(
+                                            im_raw[:, :, ch_1].shape)
                         # im_raw_temp[:, :, ch_1] = im_raw[
                         #         :, :, ch_1] - model.predict(
                         #         im_raw_extracted).reshape(im_raw[
                         #                 :, :, ch_1].shape) + model.predict(
                         #                 im_raw_extracted*0).reshape(
                         #                         im_raw[:, :, ch_1].shape)
-                        im_raw_temp[:, :, ch_1] = im_raw[
-                                :, :, ch_1] - (model.slope*
-                                im_raw_extracted).reshape(im_raw[
-                                    :, :, ch_1].shape)
                 if direction_variable == 'Bleed both':
                     for ch_2 in range(len(Channel_pointers)):
                         im_1 = im_raw[:, :, ch_1].ravel()
@@ -728,46 +702,55 @@ def UnmixChannels(self):
                     im_1 = im_1[(im_1 == im_1)]
                     # lm = sklearn.linear_model.LinearRegression()
                     # model = lm.fit(im_2, im_1)
-                    model = linregress(im_1,im_2)
+                    X = np.c_[im_2, np.ones(im_2.shape[0])]  # add bias term
+                    beta_hat = np.linalg.lstsq(X, im_1, rcond=None)[0]
                     if unmix_threshold > 0:
                         # y_hat = model.predict(im_2)
                         # y_bar = np.sum(im_1)/len(im_1)
                         # ssreg = np.sum((y_hat-y_bar)**2)
                         # sstot = np.sum((im_1-y_bar)**2)
                         # r_square = ssreg/sstot
-                        r_square = model.rvalue**2
+                        y_hat = np.dot(X,beta_hat)
+                        y_bar = np.sum(im_1)/len(im_1)
+                        ssreg = np.sum((y_hat-y_bar)**2)
+                        sstot = np.sum((im_1-y_bar)**2)
+                        r_square = ssreg/sstot
                         if r_square > unmix_threshold:
                             im_raw_extracted = im_raw[:, :, [
                                     i != ch_1 for i in range(n_channels)]]
                             im_raw_extracted = im_raw_extracted.reshape(
                                     (np.int32(im_raw_extracted.size/(
                                             n_channels-1)), n_channels-1))
+                            X = np.c_[im_raw_extracted, np.ones(im_raw_extracted.shape[0])]
+                            X0 = np.c_[im_raw_extracted*0, np.ones(im_raw_extracted.shape[0])]
+                            im_raw_temp[:, :, ch_1] = im_raw[
+                                    :, :, ch_1] - np.dot(X,beta_hat).reshape(im_raw[
+                                        :, :, ch_1].shape) + np.dot(X0,beta_hat).reshape(
+                                                im_raw[:, :, ch_1].shape)
                             # im_raw_temp[:, :, ch_1] = im_raw[
                             #         :, :, ch_1] - model.predict(
                             #         im_raw_extracted).reshape(im_raw[
                             #             :, :, ch_1].shape) + model.predict(
                             #     im_raw_extracted*0).reshape(
                             #             im_raw[:, :, ch_1].shape)
-                            im_raw_temp[:, :, ch_1] = im_raw[
-                                    :, :, ch_1] - (model.slope*
-                                    im_raw_extracted).reshape(im_raw[
-                                        :, :, ch_1].shape)
                     else:
                         im_raw_extracted = im_raw[:, :, [
                                 i != ch_1 for i in range(n_channels)]]
                         im_raw_extracted = im_raw_extracted.reshape(
                                 (np.int32(im_raw_extracted.size/(
                                         n_channels-1)), n_channels-1))
+                        X = np.c_[im_raw_extracted, np.ones(im_raw_extracted.shape[0])]
+                        X0 = np.c_[im_raw_extracted*0, np.ones(im_raw_extracted.shape[0])]
+                        im_raw_temp[:, :, ch_1] = im_raw[
+                                :, :, ch_1] - np.dot(X,beta_hat).reshape(im_raw[
+                                    :, :, ch_1].shape) + np.dot(X0,beta_hat).reshape(
+                                            im_raw[:, :, ch_1].shape)
                         # im_raw_temp[:, :, ch_1] = im_raw[
                         #         :, :, ch_1] - model.predict(
                         #         im_raw_extracted).reshape(im_raw[
                         #                 :, :, ch_1].shape) + model.predict(
                         #                 im_raw_extracted*0).reshape(im_raw[
                         #                         :, :, ch_1].shape)
-                        im_raw_temp[:, :, ch_1] = im_raw[
-                                :, :, ch_1] - (model.slope*
-                                im_raw_extracted).reshape(im_raw[
-                                    :, :, ch_1].shape)
                 if direction_variable == 'Bleed both':
                     for ch_2 in range(len(Channel_pointers)):
                         im_1 = im_raw[:, :, ch_1].ravel()
@@ -800,11 +783,11 @@ def UnmixChannels(self):
                                     :, :, ch_2] - p_1(im_raw[
                                             :, :, ch_1]) + p_1(0)
             else:
-                self.popupmsg('Did not think any sane person ' +
-                            'would want this...\n' +
-                            'If you are reading this message, and ' +
-                            'really want this implemented\n' +
-                            'send an email to Emrah to implement this.')
+                popupmsg('Did not think any sane person ' +
+                        'would want this...\n' +
+                        'If you are reading this message, and ' +
+                        'really want this implemented\n' +
+                        'send an email to Emrah to implement this.')
                 destroy_popup = False
         if destroy_popup:
             self.im_raw[self.activeImage] = im_raw_temp
