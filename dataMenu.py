@@ -1045,12 +1045,49 @@ def PhenotypeSelection(self):
         PhenotypeSelectionForReal()
 
 def DataAnalysis(self):
+    def get_dists(locs1,locs2):
+        dist_array = np.zeros((locs1.shape[0],locs2.shape[0]))
+        for i in range(locs1.shape[0]):
+            dist_array[i,:] = ((locs1[i,0] - locs2[:,0])**2 + (locs1[i,1] - locs2[:,1])**2)**0.5
+        return dist_array
+
+    def do_monte_carlo(cell_dists, n_1, n_2, anal_type=False, n_trial=1000, n_cells=1, is_dist=True):
+        if is_dist:
+            cell_dists[cell_dists < 0.001] = np.nan
+            dist_all = []
+            for i in range(n_trial):
+                x_y = np.random.choice(range(cell_dists.shape[0]),n_1,replace=False)
+                if anal_type:
+                    x_y2 = x_y
+                else:
+                    x_y2 = np.random.choice(range(cell_dists.shape[1]),n_2,replace=False)
+                dists_temp_orig = cell_dists[x_y, :][:, x_y2]
+                if dists_temp_orig.shape[1] > n_cells:
+                    min_dist = np.mean(np.nanmean(np.sort(dists_temp_orig, axis=1)[:,:n_cells],axis=1))
+                else:
+                    min_dist = np.mean(np.nanmean(dists_temp_orig, axis=1))
+                dist_all.append(min_dist)
+            return np.mean(dist_all), np.std(dist_all)
+        else:  
+            cell_dists[cell_dists == 0] = np.inf
+            dist_all = []
+            for i in range(n_trial):
+                x_y = np.random.choice(range(cell_dists.shape[0]),n_1,replace=False)
+                if anal_type:
+                    x_y2 = x_y
+                else:
+                    x_y2 = np.random.choice(range(cell_dists.shape[1]),n_2,replace=False)
+                dists_temp_orig = cell_dists[x_y, :][:, x_y2]
+                n_cells = np.sum(dists_temp_orig <= n_cells)
+                min_dist = n_cells/n_2
+                dist_all.append(min_dist)
+            return np.mean(dist_all), np.std(dist_all)
+
     def PerformNNA_Analysis(segment_var, pheno_cells, pheno_cells2,
                             phenotypes, pheno_temp, NNA_relation, NNA_dist,
                             pheno_temp2, locations, numbers, density,
-                            number_density, average_area, cell_props, cell_props2 = []):
-        if len(cell_props2) == 0:
-            cell_props2 = cell_props
+                            number_density, average_area, cell_props, cell_props2, all_dists):
+
         seg_available = np.unique(np.hstack(cell_props['Segments'][:]))
         if segment_var == 'Anywhere':
             for segment_var_temp in seg_available:
@@ -1160,6 +1197,46 @@ def DataAnalysis(self):
                         number_density.append(np.nan)
                         density.append(np.nan)
 
+                elif NNA_relation == "distance to score":
+                    n_cells = np.int32(NNA_dist)
+                    if n_cells < 1:
+                        continue
+                    dists_temp_orig = get_dists(cell1xy,cell2xy)
+                    dists_temp_orig[dists_temp_orig==0] = np.nan
+                    if dists_temp_orig.shape[1] > n_cells:
+                        min_dist = np.mean(np.nanmean(np.sort(dists_temp_orig, axis=1)[:,:n_cells],axis=1))
+                    else:
+                        min_dist = np.mean(np.nanmean(np.sort(dists_temp_orig, axis=1),axis=1))
+                    phenotypes.append(pheno_temp + ' ' + NNA_relation +
+                                        ' ' + NNA_dist + ' ' + pheno_temp2)
+                    locations.append(segment_var_temp)
+                    number_density.append(np.nan)
+                    density.append(np.nan)
+                    if isinstance(min_dist,float):
+                        mu, sigma = do_monte_carlo(np.array(all_dists.iloc[all_cells,all_cells2]), cell1xy.shape[0], cell2xy.shape[0], pheno_temp == pheno_temp2, n_trial=1000, n_cells=n_cells, is_dist=True)
+                        numbers.append((min_dist-mu)/sigma)
+                    else:
+                        numbers.append(np.nan)
+
+                elif NNA_relation == "within score":
+                    n_dist = np.float(NNA_dist)
+                    if n_dist <= 0:
+                        continue
+                    dists_temp_orig = get_dists(cell1xy,cell2xy)
+                    dists_temp_orig[dists_temp_orig==0] = np.inf
+                    n_cells = np.sum(dists_temp <= n_dist)
+                    min_dist = n_cells/cell2xy.shape[0]
+                    phenotypes.append(pheno_temp + ' ' + NNA_relation + ' '
+                                        + NNA_dist + ' ' + pheno_temp2)
+                    locations.append(segment_var_temp)
+                    number_density.append(np.nan)
+                    density.append(np.nan)
+                    if isinstance(min_dist,float):
+                        mu, sigma = do_monte_carlo(np.array(all_dists.iloc[all_cells,all_cells2]), cell1xy.shape[0], cell2xy.shape[0], pheno_temp == pheno_temp2, n_trial=1000, n_cells=n_dist, is_dist=False)
+                        numbers.append((min_dist-mu)/sigma)
+                    else:
+                        numbers.append(np.nan)
+
         else:
             average_area.append(np.nan)
             segment_var_temp = segment_var
@@ -1264,6 +1341,49 @@ def DataAnalysis(self):
                     numbers.append(np.nan)
                     number_density.append(np.nan)
                     density.append(np.nan)
+            
+            elif NNA_relation == "distance to score":
+                n_cells = np.int32(NNA_dist)
+                if n_cells < 1:
+                    return (phenotypes, locations, numbers,
+                            number_density, density)
+                dists_temp_orig = get_dists(cell1xy,cell2xy)
+                dists_temp_orig[dists_temp_orig==0] = np.nan
+                if dists_temp_orig.shape[1] > n_cells:
+                    min_dist = np.mean(np.nanmean(np.sort(dists_temp_orig, axis=1)[:,:n_cells],axis=1))
+                else:
+                    min_dist = np.mean(np.nanmean(np.sort(dists_temp_orig, axis=1),axis=1))
+                phenotypes.append(pheno_temp + ' ' + NNA_relation +
+                                    ' ' + NNA_dist + ' ' + pheno_temp2)
+                locations.append(segment_var_temp)
+                number_density.append(np.nan)
+                density.append(np.nan)
+                if isinstance(min_dist,float):
+                    mu, sigma = do_monte_carlo(np.array(all_dists.iloc[all_cells,all_cells2]), cell1xy.shape[0], cell2xy.shape[0], pheno_temp == pheno_temp2, n_trial=1000, n_cells=n_cells, is_dist=True)
+                    numbers.append((min_dist-mu)/sigma)
+                else:
+                    numbers.append(np.nan)
+
+            elif NNA_relation == "within score":
+                n_dist = np.float(NNA_dist)
+                if n_dist <= 0:
+                    return (phenotypes, locations, numbers,
+                            number_density, density)
+                dists_temp_orig = get_dists(cell1xy,cell2xy)
+                dists_temp_orig[dists_temp_orig==0] = np.inf
+                n_cells = np.sum(dists_temp <= n_dist)
+                min_dist = n_cells/cell2xy.shape[0]
+                phenotypes.append(pheno_temp + ' ' + NNA_relation + ' '
+                                    + NNA_dist + ' ' + pheno_temp2)
+                locations.append(segment_var_temp)
+                number_density.append(np.nan)
+                density.append(np.nan)
+                if isinstance(min_dist,float):
+                    mu, sigma = do_monte_carlo(np.array(all_dists.iloc[all_cells,all_cells2]), cell1xy.shape[0], cell2xy.shape[0], pheno_temp == pheno_temp2, n_trial=1000, n_cells=n_dist, is_dist=False)
+                    numbers.append((min_dist-mu)/sigma)
+                else:
+                    numbers.append(np.nan)
+
         return (phenotypes, locations, numbers, number_density, density, average_area)
 
     def GetPhenoCells(cell_phenos, pheno_var, logicle_int, pheno_cells):
@@ -1367,7 +1487,7 @@ def DataAnalysis(self):
                 seg_available.append(i)
         seg_available = np.unique(seg_available)
         seg_available = np.append(seg_available, 'Anywhere')
-        NNA_vars = ["distance to", "within"]
+        NNA_vars = ["distance to", "within", "distance to score", "within score"]
         internal_windows = tkinter.Frame(self.popup, width=200, height=10)
         internal_windows.pack(side=tkinter.TOP)
         data_int = []
@@ -1489,6 +1609,21 @@ def DataAnalysis(self):
         self.tree.pack()
 
     def AppendData(activeImage=[], *a):
+        def get_all_dists (Props1, Props2):
+            locs1 = np.array(Props1['Cell Centroid'])
+            locs1 = np.array([np.float32(b) for b in locs1])
+            locs2 = np.array(Props2['Cell Centroid'])
+            locs2 = np.array([np.float32(b) for b in locs2])
+            return pd.DataFrame(index = Props1.index, columns =  Props2.index, data = get_dists(locs1,locs2))
+
+        def define_cell_dists(cell_props,all_cell_dists):
+            if len(all_cell_dists) > 0:
+                return(all_cell_dists)
+            else:
+                locs = np.array(cell_props['Cell Centroid'])
+                locs = np.array([np.float32(b) for b in locs])
+                return pd.DataFrame(index = cell_props.index, columns =  cell_props.index, data = get_dists(locs,locs))
+                                
         show_data = False
         if activeImage == []:
             activeImage = self.activeImage
@@ -1510,8 +1645,8 @@ def DataAnalysis(self):
         number_density = []
         density = []
         average_area = []
-
-
+        all_cell_dists = []
+        
         if len(tissue_props) > 0:
             seg_available_temp = list(seg_available)
             for i in tissue_props:
@@ -1827,13 +1962,16 @@ def DataAnalysis(self):
                                                 cell_props['Phenotypes'],
                                                 pheno_var,
                                                 logicle_int, pheno_cells2)
+                                if 'score' in NNA_relation:
+                                    all_cell_dists = define_cell_dists(cell_props,all_cell_dists)
                                 [phenotypes, locations, numbers,
                                     number_density,
                                     density, average_area] = PerformNNA_Analysis(
                                     segment_var, pheno_cells, pheno_cells2,
                                     phenotypes, pheno_temp, NNA_relation,
                                     NNA_dist, pheno_temp2, locations, numbers,
-                                    density, number_density, average_area, cell_props)
+                                    density, number_density, average_area, cell_props,
+                                    cell_props, all_cell_dists)
                             tissue_pheno_available = []
                             for segName in analysis_params["Phenotypes"].keys():
                                 for i in analysis_params["Segments"].keys():
@@ -1866,6 +2004,10 @@ def DataAnalysis(self):
                                 tissue_props_temp = tissue_props[tissue_temp].copy()
                                 tissue_props_temp['Cell Area'] = tissue_props_temp['Area']
                                 tissue_props_temp['Cell Centroid'] = tissue_props_temp['Centroid']
+                                if 'score' in NNA_relation:
+                                    ref_dists = get_all_dists(cell_props, tissue_props_temp)
+                                else:
+                                    ref_dists = []
                                 [phenotypes, locations, numbers,
                                     number_density,
                                     density, average_area] = PerformNNA_Analysis(
@@ -1873,7 +2015,7 @@ def DataAnalysis(self):
                                     phenotypes, pheno_temp, NNA_relation,
                                     NNA_dist, pheno_temp2, locations, numbers,
                                     density, number_density, average_area, cell_props,
-                                    tissue_props_temp)
+                                    tissue_props_temp, ref_dists)
                         else:
                             pheno_temp2 = pheno_var2
                             tissue_temp = []
@@ -1895,13 +2037,16 @@ def DataAnalysis(self):
                                                     cell_props['Phenotypes'],
                                                     pheno_var,
                                                     logicle_int, pheno_cells2)
+                                if 'score' in NNA_relation:
+                                    all_cell_dists = define_cell_dists(cell_props,all_cell_dists)
                                 [phenotypes, locations, numbers,
                                     number_density,
                                     density, average_area] = PerformNNA_Analysis(
                                     segment_var, pheno_cells, pheno_cells2,
                                     phenotypes, pheno_temp, NNA_relation,
                                     NNA_dist, pheno_temp2, locations, numbers,
-                                    density, number_density, average_area, cell_props)
+                                    density, number_density, average_area, cell_props,
+                                    cell_props, all_cell_dists)
                             else:
                                 pheno_init = [pheno_temp2, tissue_temp]
                                 pheno_temp2 = pheno_init[0][len(tissue_temp)+3:]
@@ -1927,6 +2072,10 @@ def DataAnalysis(self):
                                 tissue_props_temp = tissue_props[tissue_temp].copy()
                                 tissue_props_temp['Cell Area'] = tissue_props_temp['Area']
                                 tissue_props_temp['Cell Centroid'] = tissue_props_temp['Centroid']
+                                if 'score' in NNA_relation:
+                                    ref_dists = get_all_dists(cell_props, tissue_props_temp)
+                                else:
+                                    ref_dists = []
                                 [phenotypes, locations, numbers,
                                     number_density,
                                     density, average_area] = PerformNNA_Analysis(
@@ -1934,7 +2083,7 @@ def DataAnalysis(self):
                                     phenotypes, pheno_temp, NNA_relation,
                                     NNA_dist, pheno_temp2, locations, numbers,
                                     density, number_density, average_area, cell_props,
-                                    tissue_props_temp)
+                                    tissue_props_temp, ref_dists)
                     tissue_pheno_available = []
                     for segName in analysis_params["Phenotypes"].keys():
                         for i in analysis_params["Segments"].keys():
@@ -1966,7 +2115,10 @@ def DataAnalysis(self):
                         tissue_props_temp1 = tissue_props[tissue_temp].copy()
                         tissue_props_temp1['Cell Area'] = tissue_props_temp1['Area']
                         tissue_props_temp1['Cell Centroid'] = tissue_props_temp1['Centroid']
-
+                        if 'score' in NNA_relation:
+                            ref_dists = get_all_dists(tissue_props_temp1, cell_props)
+                        else:
+                            ref_dists = []
                         if pheno_var2 == "Everything":
                             pheno_available = []
                             for segName in analysis_params["Phenotypes"].keys():
@@ -2000,7 +2152,7 @@ def DataAnalysis(self):
                                     phenotypes, pheno_temp, NNA_relation,
                                     NNA_dist, pheno_temp2, locations, numbers,
                                     density, number_density, average_area,
-                                    tissue_props_temp1, cell_props)
+                                    tissue_props_temp1, cell_props, ref_dists)
                             tissue_pheno_available = []
                             for segName in analysis_params["Phenotypes"].keys():
                                 for i in analysis_params["Segments"].keys():
@@ -2033,6 +2185,11 @@ def DataAnalysis(self):
                                 tissue_props_temp = tissue_props[tissue_temp].copy()
                                 tissue_props_temp['Cell Area'] = tissue_props_temp['Area']
                                 tissue_props_temp['Cell Centroid'] = tissue_props_temp['Centroid']
+                                if 'score' in NNA_relation:
+                                    ref_dists2 = get_all_dists(tissue_props_temp1, tissue_props_temp)
+                                else:
+                                    ref_dists2 = []
+                                
                                 [phenotypes, locations, numbers,
                                     number_density,
                                     density, average_area] = PerformNNA_Analysis(
@@ -2040,7 +2197,7 @@ def DataAnalysis(self):
                                     phenotypes, pheno_temp, NNA_relation,
                                     NNA_dist, pheno_temp2, locations, numbers,
                                     density, number_density, average_area,
-                                    tissue_props_temp1, tissue_props_temp)
+                                    tissue_props_temp1, tissue_props_temp, ref_dists2)
                         else:
                             pheno_temp2 = pheno_var2
                             tissue_temp = []
@@ -2069,7 +2226,7 @@ def DataAnalysis(self):
                                     phenotypes, pheno_temp, NNA_relation,
                                     NNA_dist, pheno_temp2, locations, numbers,
                                     density, number_density, average_area,
-                                    tissue_props_temp1, cell_props)
+                                    tissue_props_temp1, cell_props, ref_dists)
                             else:
                                 pheno_init = [pheno_temp2, tissue_temp]
                                 pheno_temp2 = pheno_init[0][len(tissue_temp)+3:]
@@ -2095,6 +2252,11 @@ def DataAnalysis(self):
                                 tissue_props_temp = tissue_props[tissue_temp].copy()
                                 tissue_props_temp['Cell Area'] = tissue_props_temp['Area']
                                 tissue_props_temp['Cell Centroid'] = tissue_props_temp['Centroid']
+                                if 'score' in NNA_relation:
+                                    ref_dists2 = get_all_dists(tissue_props_temp1, tissue_props_temp)
+                                else:
+                                    ref_dists2 = []
+                                
                                 [phenotypes, locations, numbers,
                                     number_density,
                                     density, average_area] = PerformNNA_Analysis(
@@ -2102,7 +2264,7 @@ def DataAnalysis(self):
                                     phenotypes, pheno_temp, NNA_relation,
                                     NNA_dist, pheno_temp2, locations, numbers,
                                     density, number_density, average_area,
-                                    tissue_props_temp1, tissue_props_temp)
+                                    tissue_props_temp1, tissue_props_temp, ref_dists2)
 
                 else:
                     pheno_temp = pheno_var1
@@ -2149,13 +2311,16 @@ def DataAnalysis(self):
                                                 cell_props['Phenotypes'],
                                                 pheno_var,
                                                 logicle_int, pheno_cells2)
+                                if 'score' in NNA_relation:
+                                    all_cell_dists = define_cell_dists(cell_props,all_cell_dists)
                                 [phenotypes, locations, numbers,
                                     number_density,
                                     density, average_area] = PerformNNA_Analysis(
                                     segment_var, pheno_cells, pheno_cells2,
                                     phenotypes, pheno_temp, NNA_relation,
                                     NNA_dist, pheno_temp2, locations, numbers,
-                                    density, number_density, average_area, cell_props)
+                                    density, number_density, average_area, cell_props,
+                                    cell_props, all_cell_dists)
                             tissue_pheno_available = []
                             for segName in analysis_params["Phenotypes"].keys():
                                 for i in analysis_params["Segments"].keys():
@@ -2188,6 +2353,10 @@ def DataAnalysis(self):
                                 tissue_props_temp = tissue_props[tissue_temp].copy()
                                 tissue_props_temp['Cell Area'] = tissue_props_temp['Area']
                                 tissue_props_temp['Cell Centroid'] = tissue_props_temp['Centroid']
+                                if 'score' in NNA_relation:
+                                    ref_dists = get_all_dists(cell_props, tissue_props_temp)
+                                else:
+                                    ref_dists = []
                                 [phenotypes, locations, numbers,
                                     number_density,
                                     density, average_area] = PerformNNA_Analysis(
@@ -2195,7 +2364,7 @@ def DataAnalysis(self):
                                     phenotypes, pheno_temp, NNA_relation,
                                     NNA_dist, pheno_temp2, locations, numbers,
                                     density, number_density, average_area, cell_props,
-                                    tissue_props_temp)
+                                    tissue_props_temp, ref_dists)
                         else:
                             pheno_temp2 = pheno_var2
                             tissue_temp = []
@@ -2217,13 +2386,16 @@ def DataAnalysis(self):
                                                     cell_props['Phenotypes'],
                                                     pheno_var,
                                                     logicle_int, pheno_cells2)
+                                if 'score' in NNA_relation:
+                                    all_cell_dists = define_cell_dists(cell_props,all_cell_dists)
                                 [phenotypes, locations, numbers,
                                     number_density,
                                     density, average_area] = PerformNNA_Analysis(
                                     segment_var, pheno_cells, pheno_cells2,
                                     phenotypes, pheno_temp, NNA_relation,
                                     NNA_dist, pheno_temp2, locations, numbers,
-                                    density, number_density, average_area, cell_props)
+                                    density, number_density, average_area, cell_props,
+                                    cell_props, all_cell_dists)
                             else:
                                 pheno_init = [pheno_temp2, tissue_temp]
                                 pheno_temp2 = pheno_init[0][len(tissue_temp)+3:]
@@ -2249,6 +2421,10 @@ def DataAnalysis(self):
                                 tissue_props_temp = tissue_props[tissue_temp].copy()
                                 tissue_props_temp['Cell Area'] = tissue_props_temp['Area']
                                 tissue_props_temp['Cell Centroid'] = tissue_props_temp['Centroid']
+                                if 'score' in NNA_relation:
+                                    ref_dists = get_all_dists(cell_props, tissue_props_temp)
+                                else:
+                                    ref_dists = []
                                 [phenotypes, locations, numbers,
                                     number_density,
                                     density, average_area] = PerformNNA_Analysis(
@@ -2256,7 +2432,7 @@ def DataAnalysis(self):
                                     phenotypes, pheno_temp, NNA_relation,
                                     NNA_dist, pheno_temp2, locations, numbers,
                                     density, number_density, average_area, cell_props,
-                                    tissue_props_temp)
+                                    tissue_props_temp, ref_dists)
                     else:
                         pheno_init = [pheno_temp, tissue_temp]
                         pheno_temp = pheno_init[0][len(tissue_temp)+3:]
@@ -2282,6 +2458,10 @@ def DataAnalysis(self):
                         tissue_props_temp1 = tissue_props[tissue_temp].copy()
                         tissue_props_temp1['Cell Area'] = tissue_props_temp1['Area']
                         tissue_props_temp1['Cell Centroid'] = tissue_props_temp1['Centroid']
+                        if 'score' in NNA_relation:
+                            ref_dists = get_all_dists(tissue_props_temp1, cell_props)
+                        else:
+                            ref_dists = []
 
 
                         if pheno_var2 == "Everything":
@@ -2321,7 +2501,7 @@ def DataAnalysis(self):
                                     phenotypes, pheno_temp, NNA_relation,
                                     NNA_dist, pheno_temp2, locations, numbers,
                                     density, number_density, average_area,
-                                    tissue_props_temp1, cell_props)
+                                    tissue_props_temp1, cell_props, ref_dists)
                             tissue_pheno_available = []
                             for segName in analysis_params["Phenotypes"].keys():
                                 for i in analysis_params["Segments"].keys():
@@ -2354,6 +2534,10 @@ def DataAnalysis(self):
                                 tissue_props_temp = tissue_props[tissue_temp].copy()
                                 tissue_props_temp['Cell Area'] = tissue_props_temp['Area']
                                 tissue_props_temp['Cell Centroid'] = tissue_props_temp['Centroid']
+                                if 'score' in NNA_relation:
+                                    ref_dists2 = get_all_dists(tissue_props_temp1, tissue_props_temp)
+                                else:
+                                    ref_dists2 = []
                                 [phenotypes, locations, numbers,
                                     number_density,
                                     density, average_area] = PerformNNA_Analysis(
@@ -2362,7 +2546,7 @@ def DataAnalysis(self):
                                     NNA_dist, pheno_temp2, locations, numbers,
                                     density, number_density, average_area,
                                     tissue_props_temp1,
-                                    tissue_props_temp)
+                                    tissue_props_temp, ref_dists2)
                         else:
                             pheno_temp2 = pheno_var2
                             tissue_temp = []
@@ -2391,7 +2575,7 @@ def DataAnalysis(self):
                                     phenotypes, pheno_temp, NNA_relation,
                                     NNA_dist, pheno_temp2, locations, numbers,
                                     density, number_density, average_area,
-                                    tissue_props_temp1, cell_props)
+                                    tissue_props_temp1, cell_props, ref_dists)
                             else:
                                 pheno_init = [pheno_temp2, tissue_temp]
                                 pheno_temp2 = pheno_init[0][len(tissue_temp)+3:]
@@ -2418,6 +2602,10 @@ def DataAnalysis(self):
                                 tissue_props_temp = tissue_props[tissue_temp].copy()
                                 tissue_props_temp['Cell Area'] = tissue_props_temp['Area']
                                 tissue_props_temp['Cell Centroid'] = tissue_props_temp['Centroid']
+                                if 'score' in NNA_relation:
+                                    ref_dists2 = get_all_dists(tissue_props_temp1, tissue_props_temp)
+                                else:
+                                    ref_dists2 = []
                                 [phenotypes, locations, numbers,
                                     number_density,
                                     density, average_area] = PerformNNA_Analysis(
@@ -2426,7 +2614,7 @@ def DataAnalysis(self):
                                     NNA_dist, pheno_temp2, locations, numbers,
                                     density, number_density, average_area,
                                     tissue_props_temp1,
-                                    tissue_props_temp)
+                                    tissue_props_temp, ref_dists2)
 
         self.overall_data_to_export[filename] = pd.DataFrame({
                 "Phenotypes": phenotypes, "Locations": locations,
@@ -2556,9 +2744,7 @@ def DataAnalysis(self):
                     data_temp.append(data_int[j])
                     data_temp.append(data_int[j+1].get())
                     data_temp.append(data_int[j+3].get())
-                # print(data_temp)
                 dataParams.append(data_temp)
-        # print(dataParams)
         if filename_save:
             pickle_savename = filename_save
             if filename_save[-7:] != '.pickle':
@@ -2822,7 +3008,7 @@ def DataAnalysis(self):
     seg_available = np.unique(seg_available)
     seg_available = np.append(seg_available, 'Anywhere')
     logicle_vars = ["and", "or", "and not", "or  not"]
-    NNA_vars = ["distance to", "within"]
+    NNA_vars = ["distance to", "within", "distance to score", "within score"]
     if len(self.dataParams) != 0:
         # addPhenoButton = []
         for i in range(len(self.dataParams)):
@@ -4982,7 +5168,6 @@ def QuickAnalysisLikeSure(self):
     self.analyze_index[self.activeImage] = analyze_index
     Get_cell_props(self)
     Perform_tissue_analysis(tissue_keys)
-    # print(tissue_keys)
     Get_tissue_phenotypes()
     im_analyzed = self.im_analyzed[self.activeImage]
     analyze_index = self.analyze_index[self.activeImage]
