@@ -120,7 +120,7 @@ def check_consent():
                           'Immunology group,\nDepartment of Medical ' +
                           'Oncology in Erasmus MC, The Netherlands\n' +
                           'with direct consent from H. Emrah' +
-                          ' Balcioglu (h.balcioglu@erasmusmc.nl)\nor ' +
+                          ' Balcioglu (github.com/balciemrah)\nor ' +
                           'Reno Debets (j.debets@erasmusmc.nl).\n\nBy ' +
                           'pressing agree and using this software you ' +
                           'confirm that you have read this ' +
@@ -135,7 +135,7 @@ def check_consent():
 
 def consent_given():
     root = tkinter.Tk()
-    root.title("TME Analyzer v2.11")
+    root.title("TME Analyzer v0")
     root.geometry("1200x800")
     ImageAnalysis(root)
     root.mainloop()
